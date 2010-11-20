@@ -14,34 +14,34 @@ if(!empty($_FILES))
 	}
 	if(empty($errors))
 	{
-		$target_dir = "videos/";
-		$target_path = $target_dir.basename($_FILES['uploadedfile']['name']);
-		if(file_exists($target_path))
+		$temp_dir = "temp/";
+		$temp_name = basename($_FILES['uploadedfile']['name']);
+		if(file_exists($temp_path))
 		{
 			array_push($errors, "A file of that name already exists");
 		}
-		elseif(move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $target_path))
+		elseif(move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $temp_dir.$temp_name))
 		{
-			ob_implicit_flush(true);
-			ob_end_flush();
-			chmod($target_path, 0755);
+			//chmod($target_path, 0755);
 			echo "The file ".basename($_FILES['uploadedfile']['name'])." has been uploaded.<br />";
 			echo "File type: ".$_FILES['uploadedfile']['type'].".<br />";
 			echo "Converting...<br />";
-			$info = pathinfo($target_path);
+			$info = pathinfo($temp_dir.$temp_name);
+			$target_dir = "videos/";
+			$target_name = base64_encode($info['filename']).".ogg";
 			$output = "";
-			system("ffmpeg -i ".$info['dirname']."/".$info['basename']." -acodec vorbis ".$info['dirname']."/".$info['filename'].".ogg", $output);
+			system("ffmpeg -i ".escapeshellarg($temp_dir.$temp_name)." -acodec vorbis ".escapeshellarg($target_dir.$target_name), $output);
 			echo "<br />Output:<br />".$output;
-			unlink($target_path);
-			chmod($info['dirname']."/".$info['filename'].".ogg", 0755);
-			if($ouput = 0)
+			unlink($temp_dir.$temp_name);
+			if($ouput != 0)
 			{
-				echo "Your video is now available <a href='./view.php?video=".$info['filename'].".ogg' >here.</a>";
+				array_push($errors, "There was a problem converting the file to ogg vorbis.");
+				unlink($target_dir.$target_name);
 			}
 			else
 			{
-				array_push($errors, "There was a problem converting the file to ogg vorbis.");
-				unlink($info['dirname']."/".$info['filename'].".ogg");
+				chmod($target_dir.$target_name, 0755);
+				echo "Your video is now available <a href='./view.php?video=".$target_name." >here.</a>";
 			}
 		}
 		else
